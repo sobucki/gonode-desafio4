@@ -23,7 +23,6 @@ class UserController {
       })
     }
 
-
     if (data.password_old) {
       const isSame = await Hash.verify(data.password_old, user.password)
 
@@ -44,13 +43,13 @@ class UserController {
       delete data.password_old
     }
 
-
     user.merge(data)
 
     await user.save()
 
     return user
   }
+
 }
 
 module.exports = UserController

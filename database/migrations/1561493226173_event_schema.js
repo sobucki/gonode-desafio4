@@ -7,6 +7,16 @@ class EventSchema extends Schema {
   up () {
     this.create('events', (table) => {
       table.increments()
+      table
+        .integer('user_id')
+        .unsigned()
+        .references('id')
+        .inTable('users')
+        .onUpdate('CASCADE')
+        .onDelete('CASCADE')
+      table.string('title').notNullable()
+      table.string('location').notNullable()
+      table.timestamp('time')
       table.timestamps()
     })
   }

@@ -4,6 +4,8 @@
 /** @typedef {import('@adonisjs/framework/src/Response')} Response */
 /** @typedef {import('@adonisjs/framework/src/View')} View */
 
+const Event = use('App/Models/Event')
+
 /**
  * Resourceful controller for interacting with events
  */
@@ -17,19 +19,13 @@ class EventController {
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async index ({ request, response, view }) {
-  }
+  async index ({ request, response, view, auth: { user } }) {
+    const { page } = request.get()
+    const events = await Event.query().where('user_id', user.id)
+      .with('user')
+      .paginate(page)
 
-  /**
-   * Render a form to be used for creating a new event.
-   * GET events/create
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async create ({ request, response, view }) {
+    return events
   }
 
   /**
@@ -40,7 +36,12 @@ class EventController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async store ({ request, response }) {
+  async store ({ request, response, auth: { user } }) {
+    const data = request.only(['title', 'location', 'time'])
+
+    const event = await Event.create({ ...data, user_id: user.id })
+
+    return event
   }
 
   /**
@@ -52,19 +53,20 @@ class EventController {
    * @param {Response} ctx.response
    * @param {View} ctx.view
    */
-  async show ({ params, request, response, view }) {
-  }
+  async show ({ params, request, response, auth: { user } }) {
+    const event = await Event.findOrFail(params.id)
 
-  /**
-   * Render a form to update an existing event.
-   * GET events/:id/edit
-   *
-   * @param {object} ctx
-   * @param {Request} ctx.request
-   * @param {Response} ctx.response
-   * @param {View} ctx.view
-   */
-  async edit ({ params, request, response, view }) {
+    if (event.user_id !== user.id) {
+      return response.status(401).send({
+        error: {
+          message: 'Você não tem permissão para ver este evento.'
+        }
+      })
+    }
+
+    await event.load('user')
+
+    return event
   }
 
   /**
@@ -76,6 +78,14 @@ class EventController {
    * @param {Response} ctx.response
    */
   async update ({ params, request, response }) {
+    const event = await Event.findOrFail(params.id)
+    const data = request.only(['title', 'location', 'time'])
+
+    event.merge(data)
+
+    await event.save()
+
+    return event
   }
 
   /**
@@ -86,7 +96,18 @@ class EventController {
    * @param {Request} ctx.request
    * @param {Response} ctx.response
    */
-  async destroy ({ params, request, response }) {
+  async destroy ({ params, response, auth: { user } }) {
+    const event = await Event.findOrFail(params.id)
+
+    if (event.user_id !== user.id) {
+      return response.status(401).send({
+        error: {
+          message: 'Você não tem permissão para excluir este evento.'
+        }
+      })
+    }
+
+    await event.delete()
   }
 }
 
